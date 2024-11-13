@@ -1,0 +1,36 @@
+﻿// SooRDP-Plugin.idl: SooRDP-Plugin 的 IDL 源
+//
+
+// 此文件将由 MIDL 工具处理以
+// 生成类型库(SooRDPPlugin.tlb)和封送处理代码。
+
+import "oaidl.idl";
+import "ocidl.idl";
+
+[
+	object,
+	uuid(59f0bcf6-0784-480d-b0aa-788d780e1544),
+	dual,
+	nonextensible,
+	pointer_default(unique)
+]
+interface ITsClientX : IDispatch
+{
+};
+[
+	uuid(3f4335b8-3e53-41a9-9367-d0e9d85a2d4e),
+	version(1.0),
+]
+library SooRDPPluginLib
+{
+	importlib("stdole2.tlb");
+	[
+		uuid(50d8b0c5-30f8-4b9e-abcd-15b08ec83934)
+	]
+	coclass TsClientX
+	{
+		[default] interface ITsClientX;
+	};
+};
+
+import "shobjidl.idl";

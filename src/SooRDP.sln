@@ -1,0 +1,41 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31727.386
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SooRDP-Plugin", "SooRDP-Plugin\SooRDP-Plugin.vcxproj", "{493A5956-9139-49D6-8BCB-0E34ADE739BC}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SooRDPClientApp", "SooRDPClientApp\SooRDPClientApp.vcxproj", "{907F3F39-3187-4E8D-B8C7-108E2531E357}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{493A5956-9139-49D6-8BCB-0E34ADE739BC}.Debug|x64.ActiveCfg = Debug|x64
+		{493A5956-9139-49D6-8BCB-0E34ADE739BC}.Debug|x64.Build.0 = Debug|x64
+		{493A5956-9139-49D6-8BCB-0E34ADE739BC}.Debug|x86.ActiveCfg = Debug|Win32
+		{493A5956-9139-49D6-8BCB-0E34ADE739BC}.Debug|x86.Build.0 = Debug|Win32
+		{493A5956-9139-49D6-8BCB-0E34ADE739BC}.Release|x64.ActiveCfg = Release|x64
+		{493A5956-9139-49D6-8BCB-0E34ADE739BC}.Release|x64.Build.0 = Release|x64
+		{493A5956-9139-49D6-8BCB-0E34ADE739BC}.Release|x86.ActiveCfg = Release|Win32
+		{493A5956-9139-49D6-8BCB-0E34ADE739BC}.Release|x86.Build.0 = Release|Win32
+		{907F3F39-3187-4E8D-B8C7-108E2531E357}.Debug|x64.ActiveCfg = Debug|x64
+		{907F3F39-3187-4E8D-B8C7-108E2531E357}.Debug|x64.Build.0 = Debug|x64
+		{907F3F39-3187-4E8D-B8C7-108E2531E357}.Debug|x86.ActiveCfg = Debug|Win32
+		{907F3F39-3187-4E8D-B8C7-108E2531E357}.Debug|x86.Build.0 = Debug|Win32
+		{907F3F39-3187-4E8D-B8C7-108E2531E357}.Release|x64.ActiveCfg = Release|x64
+		{907F3F39-3187-4E8D-B8C7-108E2531E357}.Release|x64.Build.0 = Release|x64
+		{907F3F39-3187-4E8D-B8C7-108E2531E357}.Release|x86.ActiveCfg = Release|Win32
+		{907F3F39-3187-4E8D-B8C7-108E2531E357}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {584BB3D2-316B-4A20-8D2A-1A344BE12003}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,45 @@
+HKCR
+{
+	NoRemove CLSID
+	{
+		ForceRemove {50d8b0c5-30f8-4b9e-abcd-15b08ec83934} = s 'TsClientX class'
+		{
+			ForceRemove Programmable
+			InprocServer32 = s '%MODULE%'
+			{
+				val ThreadingModel = s 'Both'
+			}
+			TypeLib = s '{3f4335b8-3e53-41a9-9367-d0e9d85a2d4e}'
+			Version = s '1.0'
+		}
+	}
+}
+
+HKCU
+{ 
+	NoRemove Software
+	{
+		NoRemove Microsoft
+		{
+			NoRemove 'Terminal Server Client'
+			{
+				NoRemove Default
+				{
+					NoRemove AddIns
+					{
+						ForceRemove SooRDP-Plugin-DVC
+						{
+							val Name = s '{50d8b0c5-30f8-4b9e-abcd-15b08ec83934}'
+							val enabled = d '1'
+						}
+						ForceRemove SooRDP-Plugin-SVC
+						{
+							val Name = s '%MODULE%'
+						}
+
+					}
+				}
+			}
+		}
+	}
+}
