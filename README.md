@@ -26,3 +26,7 @@ SooRDP插件功能有两种模式，一种是纯TCP端口转发，另一种是�
 
  * SooRDP为了方便用户使用，提供了界面操作，客户端程序打开时自动注册DLL插件，退出时卸载插件。
  * SooRDP支持Windows 2003至今，在全网似乎找不到能支持Server 2008之前的此类工具，SooRDP会根据系统自适应Static或Dynamic Virtual Channel接口，因为Server 2008之前远程桌面只有Static接口（用该接口针对实现端口转发功能难度很大）。
+
+## License
+
+[MIT](./LICENSE) © threatexpert.cn
