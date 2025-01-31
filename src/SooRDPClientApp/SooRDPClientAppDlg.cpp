@@ -628,10 +628,14 @@ BOOL FindPlugin(CString& path)
 	*wcsrchr(szCurrDir, '\\') = '\0';
 
 	path = szCurrDir;
-#ifdef _WIN64
+#ifdef _M_AMD64
 	path += L"\\SooRDP-Plugin64.dll";
+#elif defined _M_IX86
+	path += L"\\SooRDP-Plugin32.dll"; 
+#elif defined _M_ARM64 
+	path += L"\\SooRDP-PluginARM64.dll";
 #else
-	path += L"\\SooRDP-Plugin32.dll";
+	return FALSE;xx
 #endif
 	return PathFileExists(path);
 }
