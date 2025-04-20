@@ -61,7 +61,7 @@ DWORD OpenVirtualChannel(
         hWTSHandle = gpWTSVirtualChannelOpenEx(
             WTS_CURRENT_SESSION,
             (LPSTR)szChannelName,
-            WTS_CHANNEL_OPTION_DYNAMIC | WTS_CHANNEL_OPTION_DYNAMIC_PRI_HIGH);
+            WTS_CHANNEL_OPTION_DYNAMIC | WTS_CHANNEL_OPTION_DYNAMIC_PRI_HIGH | WTS_CHANNEL_OPTION_DYNAMIC_NO_COMPRESS);
     }
     else {
         hWTSHandle = WTSVirtualChannelOpen(
@@ -253,7 +253,7 @@ public:
     DWORD threadA() {
         int ret;
         enum {
-            bufsize = sizeof(CHANNEL_PDU_HEADER) + 1024 * 64
+            bufsize = CHANNEL_PDU_LENGTH
         };
         char* buf = new char[bufsize];
         CHANNEL_PDU_HEADER* pHdr = (CHANNEL_PDU_HEADER*)buf;
@@ -315,8 +315,10 @@ public:
     bool PipeWriteAll(CPipe *pipe, const void* data, int len, DWORD timeout_ms)
     {
         int ret;
+        int blocksz;
         while (len > 0) {
-            ret = pipe->Write(data, len, timeout_ms);
+            blocksz = min(len, CHANNEL_CHUNK_LENGTH);
+            ret = pipe->Write(data, blocksz, timeout_ms);
             if (ret <= 0) {
                 return false;
             }
