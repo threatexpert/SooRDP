@@ -3,7 +3,7 @@
 #include "netutils.h"
 
 #ifdef _DEBUG
-#define Dbg  printf
+#define Dbg  ATLTRACE
 #else
 #define Dbg(...)
 #endif
@@ -11,8 +11,8 @@
 #define TM_WAIT_READY  1
 #define TM_WAIT_CONFIG 2
 #define TM_DELAY_CLOSE 3
-#define TM_WAIT_PONG   4
 #define TM_KEEPALIVE   5
+#define TM_ACK         6
 
 CChannelSocket::CChannelSocket(CASocketMgr* pSockMgr, int BufferSize /*= 1024 * 1024*/)
 {
@@ -23,11 +23,12 @@ CChannelSocket::CChannelSocket(CASocketMgr* pSockMgr, int BufferSize /*= 1024 * 
     m_seqIds = 0;
     memset(&m_config, 0, sizeof(m_config));
     m_pCB = NULL;
-    m_total_read = m_total_written = 0;
+    m_total_read = m_total_written = m_peer_total_read = m_peer_readbuf_remaining = 0;
     m_bRemoteSide = FALSE;
     m_keepalive_timeout_sec = 0;
-    m_last_recv = time(NULL);
-    m_had_ping = false;
+    m_last_recv = GetTickCount();
+    m_ack_need_update = FALSE;
+    m_ChnMaxPendingSize = ChnMaxPendingSize;
 }
 
 CChannelSocket::~CChannelSocket()
@@ -64,10 +65,11 @@ void CChannelSocket::OnRead(int err)
         Close();
         return;
     }
-    m_last_recv = time(NULL);
     m_bReadAble = FALSE;
     m_total_read += ret;
     xbuf_appended(m_readbuf, ret);
+    m_ack_need_update = TRUE;
+    m_last_recv = GetTickCount();
     ParseAndDeliverData();
 }
 
@@ -88,6 +90,7 @@ BOOL CChannelSocket::Init()
     if (m_keepalive_timeout_sec) {
         setTimer(TM_KEEPALIVE, 1000);
     }
+    setTimer(TM_ACK, 250);
     return TRUE;
 }
 
@@ -121,22 +124,21 @@ void CChannelSocket::OnTimer(int id)
         killTimer(TM_DELAY_CLOSE);
         Trigger(FD_CLOSE, -2);
     }
-    else if (id == TM_WAIT_PONG) {
-        killTimer(TM_WAIT_PONG);
-        setTimer(TM_DELAY_CLOSE, 2000);
-        if (m_pCB) {
-            m_pCB->OnChannelPingTimeout();
-        }
-
-    }
     else if (id == TM_KEEPALIVE) {
-        if (m_had_ping) {
-            return;
+        if (m_keepalive_timeout_sec > 0) {
+            DWORD now = GetTickCount();
+            if (now - m_last_recv > (DWORD)m_keepalive_timeout_sec*1000) {
+                setTimer(TM_DELAY_CLOSE, 2000);
+                if (m_pCB) {
+                    m_pCB->OnChannelPingTimeout();
+                }
+            }
         }
-        time_t now = time(NULL);
-        if (now - m_last_recv >= 20) {
-            ctrl_ping();
-            setTimer(TM_WAIT_PONG, m_keepalive_timeout_sec*1000);
+    }
+    else if (id == TM_ACK) {
+        if (m_ack_need_update) {
+            m_ack_need_update = FALSE;
+            ctrl_ack();
             Trigger(FD_WRITE, 0);
         }
     }
@@ -251,14 +253,12 @@ int CChannelSocket::dispatch(struct stblkhdr* hdr, const char* buf, int len)
         Trigger(FD_WRITE, 0);
         return 1;
     }
-    else if (hdr->cmd == stb_cmd_ping && len == 0) {
-        ctrl_pong();
+    else if (hdr->cmd == stb_cmd_ack && len == sizeof(st_ack)) {
+        st_ack* c = (st_ack*)buf;
+        m_peer_total_read = _ntohll(c->recv);
+        m_peer_readbuf_remaining = ntohl(c->remaining);
         Trigger(FD_WRITE, 0);
-        return 1;
-    }
-    else if (hdr->cmd == stb_cmd_pong && len == 0) {
-        m_had_ping = false;
-        killTimer(TM_WAIT_PONG);
+        Dbg("0x%p got a ack, peer-recv=%I64d, peer-remaining=%d\n", this, m_peer_total_read, m_peer_readbuf_remaining);
         return 1;
     }
     else {
@@ -349,30 +349,24 @@ void CChannelSocket::ctrl_askready()
     m_ctrldata.append((char*)&hdr, sizeof(hdr));
 }
 
-void CChannelSocket::ctrl_ping()
-{
-    CAutoCriticalSection lc(m_lc_ctrldata);
-    stblkhdr hdr;
-    hdr.cmd = stb_cmd_ping;
-    hdr.id = 0;
-    hdr.len = 0;
-    m_had_ping = true;
-    m_ctrldata.append((char*)&hdr, sizeof(hdr));
-}
-
-void CChannelSocket::ctrl_pong()
-{
-    CAutoCriticalSection lc(m_lc_ctrldata);
-    stblkhdr hdr;
-    hdr.cmd = stb_cmd_pong;
-    hdr.id = 0;
-    hdr.len = 0;
-    m_ctrldata.append((char*)&hdr, sizeof(hdr));
-}
-
 void CChannelSocket::EnableKeepalive(int timeout_value_sec)
 {
     m_keepalive_timeout_sec = timeout_value_sec;
+}
+
+void CChannelSocket::ctrl_ack()
+{
+    CAutoCriticalSection lc(m_lc_ctrldata);
+    char buf[sizeof(stblkhdr) + sizeof(st_ack)];
+    stblkhdr* hdr = (stblkhdr*)&buf[0];
+    st_ack* c = (st_ack*)&buf[sizeof(stblkhdr)];
+
+    hdr->cmd = stb_cmd_ack;
+    hdr->id = 0;
+    hdr->len = htons(sizeof(st_ack));
+    c->recv = _htonll(m_total_read);
+    c->remaining = htonl(m_readbuf->datalen);
+    m_ctrldata.append(buf, sizeof(stblkhdr) + sizeof(st_ack));
 }
 
 void CChannelSocket::OnWrite(int err)
@@ -572,6 +566,16 @@ void CEndPointSocket::OnRead(int err) {
     }
     assert(ChnMaxChunckSize + sizeof(stblkhdr) <= m_pChnl->m_writebuf->capacity);
     assert(ChnMaxChunckSize <= m_writebuf->capacity);
+    if (m_pChnl->m_peer_readbuf_remaining >= m_pChnl->m_ChnMaxPendingSize) {
+        m_bReadAble = TRUE;
+        m_pChnl->m_readable_pp.push_back(this);
+        return;
+    }
+    if (m_pChnl->m_total_written - m_pChnl->m_peer_total_read >= m_pChnl->m_ChnMaxPendingSize) {
+        m_bReadAble = TRUE;
+        m_pChnl->m_readable_pp.push_back(this);
+        return;
+    }
     if (m_pChnl->m_writebuf->datalen >= 10 * ChnMaxChunckSize) {
         m_bReadAble = TRUE;
         m_pChnl->m_readable_pp.push_back(this);
@@ -596,7 +600,14 @@ void CEndPointSocket::OnRead(int err) {
         Close();
         return;
     }
-    m_bReadAble = FALSE;
+
+    if (m_closing) {
+        m_bReadAble = TRUE;
+        m_pChnl->m_readable_pp.push_back(this);
+    }
+    else {
+        m_bReadAble = FALSE;
+    }
 
     stblkhdr* hdr = (stblkhdr*)xbuf_datatail(m_pChnl->m_writebuf);
     hdr->cmd = stb_cmd_data;
@@ -1042,6 +1053,7 @@ CSoTunnel::CSoTunnel()
     m_hInitEvent = NULL;
     m_iMainThreadInitResult = 0;
     m_keepalive_timeout_second = 0;
+    m_chn_max_pending_size = ChnMaxPendingSize;
 }
 
 CSoTunnel::~CSoTunnel()
@@ -1054,11 +1066,17 @@ void CSoTunnel::EnableKeepalive(int timeout_second)
     m_keepalive_timeout_second = timeout_second;
 }
 
+void CSoTunnel::SetChannelMaxPendingSize(uint32_t size)
+{
+    m_chn_max_pending_size = size;
+}
+
 BOOL CSoTunnel::InitLocal(int bindPort, const char* bindIP /*= "127.0.0.1*/)
 {
     m_pChnSocket = new CChannelSocket(&m_asmgr);
     m_pChnSocket->SetCallback(this);
     m_pChnSocket->m_keepalive_timeout_sec = m_keepalive_timeout_second;
+    m_pChnSocket->m_ChnMaxPendingSize = m_chn_max_pending_size;
     m_pAcceptor = new CasLocalAcceptor(m_pChnSocket);
     m_pTunnelIO = Cnbsocket::createInstance();
     

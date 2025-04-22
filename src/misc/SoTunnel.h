@@ -27,6 +27,12 @@ struct st_config
     unsigned short port;
 };
 
+struct st_ack
+{
+    uint64_t recv;
+    uint32_t remaining;
+};
+
 #pragma pack(pop)
 
 #define stb_cmd_newconn 0
@@ -36,12 +42,12 @@ struct st_config
 #define stb_cmd_reset   4
 #define stb_cmd_ready   5
 #define stb_cmd_ruready 6
-#define stb_cmd_ping    7
-#define stb_cmd_pong    8
+#define stb_cmd_ack     9
 
 #define ChnMaxChunckSize (1024*16)
 #define MaxBlockszPerSend  (1024*64)
 #define ChnSocketBufferSize (1024*256)
+#define ChnMaxPendingSize (1024*1024*8)
 
 
 class ISoTunnelCallback {
@@ -60,9 +66,9 @@ class CChannelSocket
     CASocketMgr* m_pSockMgr;
     ASCONN m_connidmap;
     int m_seqIds;
-    uint64_t m_total_read, m_total_written;
+    BOOL m_ack_need_update;
     CMyCriticalSection m_lc_ctrldata;
-    time_t m_last_recv;
+    DWORD m_last_recv;
 public:
     ISoTunnelCallback* m_pCB;
     BOOL m_bReadAble;
@@ -73,7 +79,10 @@ public:
     st_config m_config;
     std::string m_ctrldata;
     int m_keepalive_timeout_sec;
-    bool m_had_ping;
+    uint64_t m_peer_total_read;
+    uint32_t m_peer_readbuf_remaining;
+    uint64_t m_total_read, m_total_written;
+    uint32_t m_ChnMaxPendingSize;
 
     CChannelSocket(CASocketMgr* pSockMgr, int BufferSize = 1024 * 1024);
     ~CChannelSocket();
@@ -104,9 +113,8 @@ public:
     void ctrl_reset();
     void ctrl_ready();
     void ctrl_askready();
-    void ctrl_ping();
-    void ctrl_pong();
     void EnableKeepalive(int timeout_value_sec);
+    void ctrl_ack();
 
     void ParseAndDeliverData();
     int dispatch(struct stblkhdr* hdr, const char* buf, int len);
@@ -193,6 +201,7 @@ class CSoTunnel
     HANDLE m_hInitEvent;
     int m_iMainThreadInitResult;
     int m_keepalive_timeout_second;
+    uint32_t m_chn_max_pending_size;
 public:
     std::wstring m_lasterr;
     Cnbsocket* m_pTunnelIO;
@@ -201,6 +210,7 @@ public:
     ~CSoTunnel();
 
     void EnableKeepalive(int timeout_second);
+    void SetChannelMaxPendingSize(uint32_t size);
     BOOL InitLocal(int bindPort, const char* bindIP="127.0.0.1");
     BOOL InitRemote();
     void Deinit();

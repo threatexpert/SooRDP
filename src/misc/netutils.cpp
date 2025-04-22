@@ -7,6 +7,7 @@
 #include <Ws2ipdef.h>
 #include <Ws2tcpip.h>
 #include "netutils.h"
+#include <stdint.h>
 
 #pragma comment(lib, "ws2_32")
 
@@ -408,4 +409,24 @@ const char * util_inet_ntop(int af, const void *src, char *dst, size_t size)
 	}
 	else
 		return NULL;
+}
+
+
+bool is_little_endian() {
+	volatile uint32_t i = 0x01234567;
+	return (*((uint8_t*)(&i))) == 0x67;
+}
+
+uint64_t _htonll(uint64_t host64) {
+	if (is_little_endian())
+		return ((uint64_t)htonl(host64 & 0xFFFFFFFF)) << 32 | htonl(host64 >> 32);
+	else
+		return host64;
+}
+
+uint64_t _ntohll(uint64_t net64) {
+	if (is_little_endian())
+		return ((uint64_t)ntohl(net64 & 0xFFFFFFFF)) << 32 | ntohl(net64 >> 32);
+	else
+		return net64;
 }

@@ -1,5 +1,5 @@
 #pragma once
-
+#include <stdint.h>
 
 BOOL socket_init_ws32();
 SOCKET socket_createListener(DWORD dwIP, WORD wPort, int backlog, bool reuseaddr, bool overlapped);
@@ -16,3 +16,5 @@ bool socket_would_block();
 
 int util_inet_pton(int af, const char *src, void *dst);
 const char * util_inet_ntop(int af, const void *src, char *dst, size_t size);
+uint64_t _htonll(uint64_t host64);
+uint64_t _ntohll(uint64_t net64);
