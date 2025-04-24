@@ -69,8 +69,12 @@ void CChannelSocket::OnRead(int err)
     m_total_read += ret;
     xbuf_appended(m_readbuf, ret);
     m_ack_need_update = TRUE;
+    if (ParseAndDeliverData() == 2) {
+        m_ack_need_update = FALSE;
+        ctrl_ack();
+        Trigger(FD_WRITE, 0);
+    }
     m_last_recv = GetTickCount();
-    ParseAndDeliverData();
 }
 
 BOOL CChannelSocket::Init()
@@ -90,7 +94,7 @@ BOOL CChannelSocket::Init()
     if (m_keepalive_timeout_sec) {
         setTimer(TM_KEEPALIVE, 1000);
     }
-    setTimer(TM_ACK, 250);
+    setTimer(TM_ACK, 1000);
     return TRUE;
 }
 
@@ -154,11 +158,12 @@ int CChannelSocket::GenUid()
     return ++m_seqIds;
 }
 
-void CChannelSocket::ParseAndDeliverData()
+int CChannelSocket::ParseAndDeliverData()
 {
-    int ret;
+    int ret = 0;
     stblkhdr hdr;
     int pos = 0;
+    int datasz = 0;
     while (m_readbuf->datalen - pos >= sizeof(stblkhdr)) {
         memcpy(&hdr, &m_readbuf->data[m_readbuf->datapos + pos], sizeof(hdr));
         hdr.id = ntohl(hdr.id);
@@ -170,10 +175,13 @@ void CChannelSocket::ParseAndDeliverData()
             }
             else if (ret == -2) {
                 Trigger(FD_CLOSE, -2);
-                return;
+                return -2;
             }
             else {
                 pos += sizeof(stblkhdr) + hdr.len;
+                if (hdr.cmd == stb_cmd_data) {
+                    datasz += hdr.len;
+                }
             }
         }
         else {
@@ -186,6 +194,10 @@ void CChannelSocket::ParseAndDeliverData()
             m_bReadAble = TRUE;
         }
     }
+    if (datasz != 0) {
+        ret = 2;
+    }
+    return ret;
 }
 
 int CChannelSocket::dispatch(struct stblkhdr* hdr, const char* buf, int len)
@@ -401,7 +413,7 @@ void CChannelSocket::OnWrite(int err)
         }
     }
 
-    if (sentsz) {
+    if (sentsz || !m_writebuf->datalen) {
         while (m_readable_pp.size()) {
             CEndPointSocket* pSock = *m_readable_pp.begin();
             m_readable_pp.pop_front();
@@ -656,7 +668,7 @@ void CEndPointSocket::OnWrite(int err) {
         }
     }
 
-    if (sentsz && m_pChnl->m_bReadAble) {
+    if ((sentsz || !m_writebuf->datalen) && m_pChnl->m_bReadAble) {
         m_pChnl->Trigger(FD_READ, 0);
         m_pChnl->m_bReadAble = FALSE;
     }
@@ -1016,7 +1028,7 @@ void CasTcpPair::OnWrite(int err)
             xbuf_pos_forward(m_writebuf, ret);
         }
     }
-    if (sentsz) {
+    if (sentsz || !m_writebuf->datalen) {
         if (m_pp->m_bReadAble) {
             m_pp->m_bReadAble = FALSE;
             m_pp->Trigger(FD_READ, 0);

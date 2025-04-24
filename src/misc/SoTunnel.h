@@ -47,7 +47,7 @@ struct st_ack
 #define ChnMaxChunckSize (1024*16)
 #define MaxBlockszPerSend  (1024*64)
 #define ChnSocketBufferSize (1024*256)
-#define ChnMaxPendingSize (1024*1024*8)
+#define ChnMaxPendingSize (1024*256)
 
 
 class ISoTunnelCallback {
@@ -116,7 +116,7 @@ public:
     void EnableKeepalive(int timeout_value_sec);
     void ctrl_ack();
 
-    void ParseAndDeliverData();
+    int ParseAndDeliverData();
     int dispatch(struct stblkhdr* hdr, const char* buf, int len);
 
 };

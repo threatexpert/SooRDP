@@ -12,7 +12,7 @@
 #include "../misc/SoTunnel.h"
 
 #ifdef _DEBUG
-#define Dbg  printf
+#define Dbg  ATLTRACE
 #else
 #define Dbg(...)
 #endif
@@ -138,6 +138,7 @@ class CTSChannelHandleToSocket
     Cnbsocket* m_sB;
     CInetAbortorBase m_ab;
     HANDLE m_hExitEvent;
+    uint64_t m_total_written;
 public:
     CTSChannelHandleToSocket() {
         m_hWTSHandle = NULL;
@@ -151,6 +152,7 @@ public:
         m_sA->SetAborter(&m_ab);
         m_sB = Cnbsocket::createInstance();
         m_sB->SetAborter(&m_ab);
+        m_total_written = 0;
     }
     ~CTSChannelHandleToSocket() {
         Close();
@@ -176,8 +178,8 @@ public:
         m_tshandle.Attach(hFile);
         m_sA->Attach(m_hSocketA);
         m_sB->Attach(m_hSocketB);
-        socket_setbufsize(m_hSocketA, 1024 * 1024 * 16);
-        socket_setbufsize(m_hSocketB, 1024 * 1024 * 16);
+        socket_setbufsize(m_hSocketA, ChnSocketBufferSize);
+        socket_setbufsize(m_hSocketB, ChnSocketBufferSize);
         m_hThreadA = CreateThread(0, 0, sThreadA, this, 0, 0);
         m_hThreadB = CreateThread(0, 0, sThreadB, this, 0, 0);
         return TRUE;
@@ -317,11 +319,13 @@ public:
         int ret;
         int blocksz;
         while (len > 0) {
-            blocksz = min(len, CHANNEL_CHUNK_LENGTH);
+            blocksz = min(len, MaxBlockszPerSend);
+            Dbg("0x%p PipeWriteAll: m_total_written=%I64d, blocksz=%d\n", this, m_total_written, blocksz);
             ret = pipe->Write(data, blocksz, timeout_ms);
             if (ret <= 0) {
                 return false;
             }
+            m_total_written += ret;
             data = (char*)data + ret;
             len -= ret;
         }
