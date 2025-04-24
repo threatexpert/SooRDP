@@ -150,7 +150,7 @@ BOOL CSooRDPClientAppDlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// 设置大图标
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 	CString strTitle;
-	strTitle.Format(_T("%s v2.1 - 狼蛛安全实验室"), LSTRW(RID_TITLE));
+	strTitle.Format(_T("%s v2.2 - 狼蛛安全实验室"), LSTRW(RID_TITLE));
 	SetWindowText(strTitle);
 
 	CString pluginPath;

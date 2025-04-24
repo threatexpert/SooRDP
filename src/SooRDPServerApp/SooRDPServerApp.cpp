@@ -245,7 +245,7 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
     {
         CenterWindow(hDlg);
         
-        swprintf_s(gTmpBuf, L"%s - v2.1", LSTRW(RID_Title));
+        swprintf_s(gTmpBuf, L"%s - v2.2", LSTRW(RID_Title));
 
         SetWindowText(hDlg, gTmpBuf);
         SendMessage(GetDlgItem(hDlg, IDC_EDIT_LOG), EM_SETLIMITTEXT, 0, 0);
