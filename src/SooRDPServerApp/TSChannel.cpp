@@ -24,6 +24,7 @@ HANDLE WINAPI DEF_xWTSVirtualChannelOpenEx(
     DWORD flags
 );
 DEF_xWTSVirtualChannelOpenEx* gpWTSVirtualChannelOpenEx = NULL;
+DWORD g_dwChannelOptions = 0;
 
 BOOL supportDynamicVirtualChannel()
 {
@@ -37,6 +38,25 @@ BOOL supportDynamicVirtualChannel()
 
     *(void**)&gpWTSVirtualChannelOpenEx = GetProcAddress(hMod, "WTSVirtualChannelOpenEx");
     return gpWTSVirtualChannelOpenEx != NULL;
+}
+
+void SetChannelOptions(int pri, bool compress)
+{
+    g_dwChannelOptions = 0;
+    if (!compress) {
+        g_dwChannelOptions |= WTS_CHANNEL_OPTION_DYNAMIC_NO_COMPRESS;
+    }
+    switch (pri) {
+    case chn_pri_med:
+        g_dwChannelOptions |= WTS_CHANNEL_OPTION_DYNAMIC_PRI_MED;
+        break;
+    case chn_pri_high:
+        g_dwChannelOptions |= WTS_CHANNEL_OPTION_DYNAMIC_PRI_HIGH;
+        break;
+    case chn_pri_real:
+        g_dwChannelOptions |= WTS_CHANNEL_OPTION_DYNAMIC_PRI_REAL;
+        break;
+    }
 }
 
 DWORD OpenVirtualChannel(
@@ -61,7 +81,7 @@ DWORD OpenVirtualChannel(
         hWTSHandle = gpWTSVirtualChannelOpenEx(
             WTS_CURRENT_SESSION,
             (LPSTR)szChannelName,
-            WTS_CHANNEL_OPTION_DYNAMIC | WTS_CHANNEL_OPTION_DYNAMIC_PRI_HIGH | WTS_CHANNEL_OPTION_DYNAMIC_NO_COMPRESS);
+            WTS_CHANNEL_OPTION_DYNAMIC | g_dwChannelOptions);
     }
     else {
         hWTSHandle = WTSVirtualChannelOpen(

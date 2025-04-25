@@ -34,6 +34,11 @@ struct tunnelctx* gtctx = NULL;
 #define MYWM_CHANNELSTAT  WM_USER+3
 #define MYWM_DATATUNNEL_END  WM_USER+4
 
+#define CB_TUNNEL_MODE_STATIC 0
+#define CB_TUNNEL_MODE_DYNAMIC 1
+#define CB_TUNNEL_COMPRESS 0
+#define CB_TUNNEL_NOCOMPRESS 1
+
 void CenterWindow(HWND hDlg)
 {
     HWND hwndOwner = NULL;
@@ -65,6 +70,39 @@ void UpdateStatusText(LPCTSTR fmt, ...)
     va_end(ap);
     _tcscat_s(buf, _T("\r\n"));
     PostMessage(hMainDlg, MYWM_MSG, 0, (LPARAM)_wcsdup(buf));
+}
+
+int GetChannelOptions_Mode()
+{
+    HWND hCtrl = GetDlgItem(hMainDlg, IDC_COMBO_MODE);
+    int index = (int)SendMessage(hCtrl, CB_GETCURSEL, 0, 0);
+    if (index != CB_ERR) {
+        return index;
+    }
+    SendMessage(hCtrl, CB_SETCURSEL, CB_TUNNEL_MODE_STATIC, 0);
+    return CB_TUNNEL_MODE_STATIC;
+}
+
+int GetChannelOptions_Pri()
+{
+    HWND hCtrl = GetDlgItem(hMainDlg, IDC_COMBO_PRI);
+    int index = (int)SendMessage(hCtrl, CB_GETCURSEL, 0, 0);
+    if (index != CB_ERR) {
+        return index;
+    }
+    SendMessage(hCtrl, CB_SETCURSEL, chn_pri_high, 0);
+    return chn_pri_high;
+}
+
+int GetChannelOptions_Compress()
+{
+    HWND hCtrl = GetDlgItem(hMainDlg, IDC_COMBO_COMPRESS);
+    int index = (int)SendMessage(hCtrl, CB_GETCURSEL, 0, 0);
+    if (index != CB_ERR) {
+        return index;
+    }
+    SendMessage(hCtrl, CB_SETCURSEL, CB_TUNNEL_NOCOMPRESS, 0);
+    return CB_TUNNEL_NOCOMPRESS;
 }
 
 class CSoTunnelRemote
@@ -176,8 +214,8 @@ struct tunnelctx {
 int soordp_srv(tunnelctx &tunnel) {
     int			ret;
     
-    BOOL bDVC = supportDynamicVirtualChannel();
-    //bDVC = FALSE;
+    SetChannelOptions(GetChannelOptions_Pri(), GetChannelOptions_Compress()== CB_TUNNEL_COMPRESS);
+    BOOL bDVC = GetChannelOptions_Mode() == CB_TUNNEL_MODE_DYNAMIC;
     if (bDVC) {
         UpdateStatusText(LSTRW(RID_Creating_DVC), tunnel.id);
     }
@@ -250,6 +288,32 @@ INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
         SetWindowText(hDlg, gTmpBuf);
         SendMessage(GetDlgItem(hDlg, IDC_EDIT_LOG), EM_SETLIMITTEXT, 0, 0);
         SetDlgItemText(hDlg, IDOK, LSTRW(RID_Start));
+
+        HWND hComboMode = GetDlgItem(hDlg, IDC_COMBO_MODE);
+        if (hComboMode) {
+            SendMessage(hComboMode, CB_INSERTSTRING, CB_TUNNEL_MODE_STATIC, (LPARAM)LSTRW(RID_Tunnel_Static));
+            if (supportDynamicVirtualChannel()) {
+                SendMessage(hComboMode, CB_INSERTSTRING, CB_TUNNEL_MODE_DYNAMIC, (LPARAM)LSTRW(RID_Tunnel_Dynamic));
+                SendMessage(hComboMode, CB_SETCURSEL, CB_TUNNEL_MODE_DYNAMIC, 0);
+            }
+            else {
+                SendMessage(hComboMode, CB_SETCURSEL, CB_TUNNEL_MODE_STATIC, 0);
+            }
+        }
+        HWND hComboPRI = GetDlgItem(hDlg, IDC_COMBO_PRI);
+        if (hComboPRI) {
+            SendMessage(hComboPRI, CB_INSERTSTRING, chn_pri_med, (LPARAM)LSTRW(RID_Tunnel_PRI_MED));
+            SendMessage(hComboPRI, CB_INSERTSTRING, chn_pri_high, (LPARAM)LSTRW(RID_Tunnel_PRI_HIGH));
+            SendMessage(hComboPRI, CB_INSERTSTRING, chn_pri_real, (LPARAM)LSTRW(RID_Tunnel_PRI_REAL));
+            SendMessage(hComboPRI, CB_SETCURSEL, chn_pri_high, 0);
+        }
+        HWND hComboCompress = GetDlgItem(hDlg, IDC_COMBO_COMPRESS);
+        if (hComboCompress) {
+            SendMessage(hComboCompress, CB_INSERTSTRING, CB_TUNNEL_COMPRESS, (LPARAM)LSTRW(RID_Tunnel_COMPRESS));
+            SendMessage(hComboCompress, CB_INSERTSTRING, CB_TUNNEL_NOCOMPRESS, (LPARAM)LSTRW(RID_Tunnel_NOCOMPRESS));
+            SendMessage(hComboCompress, CB_SETCURSEL, CB_TUNNEL_NOCOMPRESS, 0);
+        }
+
         return TRUE;
     }
     case WM_COMMAND:

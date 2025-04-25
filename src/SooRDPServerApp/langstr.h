@@ -22,4 +22,11 @@ enum {
 	RID_Tunnel_End,
 	RID_Title,
 	RID_Tunnel_Status,
+	RID_Tunnel_Dynamic,
+	RID_Tunnel_Static,
+	RID_Tunnel_PRI_MED,
+	RID_Tunnel_PRI_HIGH,
+	RID_Tunnel_PRI_REAL,
+	RID_Tunnel_COMPRESS,
+	RID_Tunnel_NOCOMPRESS,
 };

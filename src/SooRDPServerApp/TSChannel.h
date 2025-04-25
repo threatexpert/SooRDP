@@ -7,6 +7,14 @@
 
 BOOL supportDynamicVirtualChannel();
 
+enum {
+	chn_pri_med = 0,
+	chn_pri_high,
+	chn_pri_real,
+};
+
+void SetChannelOptions(int pri, bool compress);
+
 class CTSChannelSocketWrapper
 {
 	void* m_priv;

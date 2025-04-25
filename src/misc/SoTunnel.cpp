@@ -14,7 +14,7 @@
 #define TM_KEEPALIVE   5
 #define TM_ACK         6
 
-CChannelSocket::CChannelSocket(CASocketMgr* pSockMgr, int BufferSize /*= 1024 * 1024*/)
+CChannelSocket::CChannelSocket(CASocketMgr* pSockMgr, int BufferSize )
 {
     m_readbuf = xbuf_create(BufferSize);
     m_writebuf = xbuf_create(BufferSize);
@@ -416,7 +416,7 @@ void CChannelSocket::OnWrite(int err)
     if (sentsz || !m_writebuf->datalen) {
         while (m_readable_pp.size()) {
             CEndPointSocket* pSock = *m_readable_pp.begin();
-            m_readable_pp.pop_front();
+            m_readable_pp.erase(m_readable_pp.begin());
             if (pSock->m_bReadAble) {
                 pSock->m_bReadAble = FALSE;
                 pSock->Trigger(FD_READ, 0);
@@ -541,7 +541,7 @@ void CChannelSocket::CloseConnId(int connid)
 void CChannelSocket::OnDeleteClient(CEndPointSocket* pIns)
 {
     m_connidmap.erase(pIns->GetID());
-    m_readable_pp.remove(pIns);
+    m_readable_pp.erase(pIns);
     delete pIns;
     if (m_pCB) {
         m_pCB->OnChannelSocketCount((int)m_connidmap.size());
@@ -551,7 +551,7 @@ void CChannelSocket::OnDeleteClient(CEndPointSocket* pIns)
 
 ///
 
-CEndPointSocket::CEndPointSocket(CChannelSocket* pChnlSock, int type, int BufferSize /*= 1024 * 64*/)
+CEndPointSocket::CEndPointSocket(CChannelSocket* pChnlSock, int type, int BufferSize)
 {
     m_type = type;
     m_pChnl = pChnlSock;
@@ -580,22 +580,22 @@ void CEndPointSocket::OnRead(int err) {
     assert(ChnMaxChunckSize <= m_writebuf->capacity);
     if (m_pChnl->m_peer_readbuf_remaining >= m_pChnl->m_ChnMaxPendingSize) {
         m_bReadAble = TRUE;
-        m_pChnl->m_readable_pp.push_back(this);
+        m_pChnl->m_readable_pp.insert(this);
         return;
     }
     if (m_pChnl->m_total_written - m_pChnl->m_peer_total_read >= m_pChnl->m_ChnMaxPendingSize) {
         m_bReadAble = TRUE;
-        m_pChnl->m_readable_pp.push_back(this);
+        m_pChnl->m_readable_pp.insert(this);
         return;
     }
     if (m_pChnl->m_writebuf->datalen >= 10 * ChnMaxChunckSize) {
         m_bReadAble = TRUE;
-        m_pChnl->m_readable_pp.push_back(this);
+        m_pChnl->m_readable_pp.insert(this);
         return;
     }
     if (!xbuf_ensureavail(m_pChnl->m_writebuf, ChnMaxChunckSize + sizeof(stblkhdr))) {
         m_bReadAble = TRUE;
-        m_pChnl->m_readable_pp.push_back(this);
+        m_pChnl->m_readable_pp.insert(this);
         return;
     }
     int bufavail = xbuf_avail(m_pChnl->m_writebuf);
@@ -615,7 +615,7 @@ void CEndPointSocket::OnRead(int err) {
 
     if (m_closing) {
         m_bReadAble = TRUE;
-        m_pChnl->m_readable_pp.push_back(this);
+        m_pChnl->m_readable_pp.insert(this);
     }
     else {
         m_bReadAble = FALSE;

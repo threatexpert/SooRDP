@@ -98,6 +98,41 @@ LPCWSTR LSTRW_X(int i, int lid)
 			L"RDP隧道#%d已转发数据: 下行%S,上行%S,TCP连接数%d",
 			L"RDP tunnel#%d statistics: down %S, up %S, TCP:%d"
 		);
+		casexx(
+			RID_Tunnel_Dynamic,
+			L"动态",
+			L"Dynamic"
+		);
+		casexx(
+			RID_Tunnel_Static,
+			L"静态",
+			L"Static"
+		);
+		casexx(
+			RID_Tunnel_PRI_MED,
+			L"一般",
+			L"MED"
+		);
+		casexx(
+			RID_Tunnel_PRI_HIGH,
+			L"紧急",
+			L"HIGH"
+		);
+		casexx(
+			RID_Tunnel_PRI_REAL,
+			L"实时",
+			L"REAL"
+		);
+		casexx(
+			RID_Tunnel_COMPRESS,
+			L"压缩",
+			L"COMPRESS"
+		);
+		casexx(
+			RID_Tunnel_NOCOMPRESS,
+			L"不压缩",
+			L"NOCOMPRESS"
+		);
 
 	default:
 		assert(false);

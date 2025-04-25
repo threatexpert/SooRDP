@@ -2,7 +2,7 @@
 #include "ASocket.h"
 #include "xbuf.h"
 #include <string>
-#include <list>
+#include <set>
 #include <time.h>
 #include "Thread.h"
 #include "NBSocket.h"
@@ -44,7 +44,7 @@ struct st_ack
 #define stb_cmd_ruready 6
 #define stb_cmd_ack     9
 
-#define ChnMaxChunckSize (1024*16)
+#define ChnMaxChunckSize (1024*60)
 #define MaxBlockszPerSend  (1024*64)
 #define ChnSocketBufferSize (1024*256)
 #define ChnMaxPendingSize (1024*256)
@@ -75,7 +75,7 @@ public:
     xbuf* m_readbuf;
     xbuf* m_writebuf;
     BOOL m_bRemoteSide;
-    std::list<class CEndPointSocket*> m_readable_pp;
+    std::set<class CEndPointSocket*> m_readable_pp;
     st_config m_config;
     std::string m_ctrldata;
     int m_keepalive_timeout_sec;
@@ -84,7 +84,7 @@ public:
     uint64_t m_total_read, m_total_written;
     uint32_t m_ChnMaxPendingSize;
 
-    CChannelSocket(CASocketMgr* pSockMgr, int BufferSize = 1024 * 1024);
+    CChannelSocket(CASocketMgr* pSockMgr, int BufferSize = ChnSocketBufferSize);
     ~CChannelSocket();
 
     BOOL Init();
@@ -140,7 +140,7 @@ public:
     std::string    s5buf;
     int s5_stage;
     unsigned char s5_nmethod;
-    CEndPointSocket(CChannelSocket* pChnlSock, int type, int BufferSize = 1024 * 1024);
+    CEndPointSocket(CChannelSocket* pChnlSock, int type, int BufferSize = ChnSocketBufferSize);
     virtual ~CEndPointSocket();
     int GetID() { return m_id; }
 
